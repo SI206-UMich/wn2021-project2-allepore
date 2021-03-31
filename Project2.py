@@ -55,14 +55,12 @@ def get_search_links():
     url = "https://www.goodreads.com/search?q=fantasy&qid=NwUsLiA2Nc"
     info = requests.get(url)
     soup = BeautifulSoup(info.content, 'html.parser')
-    books = soup.find_all('a', class_ = 'bookTitle') #could I also do itemprop and url instead 
+    books = soup.find_all('a', class_ = 'bookTitle') 
     links = []
     for book in books:
         link = book.get('href')
-        links.append('https://www.goodreads.com/book/show/' + link)
+        links.append('https://www.goodreads.com' + link)
     return links[:10] 
-
-    #pass
 
 
 def get_book_summary(book_url):
@@ -81,12 +79,10 @@ def get_book_summary(book_url):
 
     info = requests.get(book_url)
     soup = BeautifulSoup(info.content, 'html.parser')
-
     title = soup.find('h1', id = 'bookTitle')
     author = soup.find('a', class_ = 'authorName')
     num_pages = soup.find('span', itemprop = 'numberOfPages')
 
-    #x = r'[0-9]'
     nums = '0123456789'
     num = ''
     for char in num_pages.text.strip():
@@ -113,30 +109,28 @@ def summarize_best_books(filepath):
     fhand.close()
 
     soup = BeautifulSoup(data, 'lxml')
-    categories = soup.find_all('h4', class_ = 'category__copy')
-    titles = soup.find_all('img', class_ = 'category_winnerImage')
+    titles = soup.find_all('div', class_ = 'category__winnerImageContainer')
+    categories = soup.find_all('div', class_ = 'category clearFix')
+    genres = soup.find_all('h4', class_ = 'category__copy')
 
     urls = []
     for category in categories:
-        urls = category.get('href')
+        urls.append(category.find('a')['href'])
 
-    categories_lst = []
-    for category in categories:
-        categories_lst.append(category.text.strip())
+    genres_lst = []
+    for genre in genres:
+        genres_lst.append(genre.text.strip())
 
     titles_lst = []
     for title in titles:
-        titles_lst.append(title.text.strip())
+        titles_lst.append(title.find('img')['alt'])
 
     final_lst = []
-    for i in range(len(categories_lst)):
-        final_lst.append(categories_lst[i], titles_lst[i], urls[i])
+    for i in range(len(genres_lst)):
+        final_lst.append((genres_lst[i], titles_lst[i], urls[i]))
 
     return final_lst
 
-
-
-    #pass
 
 
 def write_csv(data, filename):
@@ -159,16 +153,13 @@ def write_csv(data, filename):
 
     This function should not return anything.
     """
-    source_dir = os.path.dirname(__file__)
-    filepath = os.path.join(source_dir, filename)
-    write_file = open(filepath, 'w')
+ 
+    write_file = open(filename, 'w') 
     writer = csv.writer(write_file, delimiter=',')
-    writer.writerow('Book title,Author Name')
+    writer.writerow(["Book title", "Author Name"])
     for tup in data:
-        writer.writerow(tup[0], tup[1]) #can't take 2 arguments but idk what to do 
+        writer.writerow(tup) 
     write_file.close()
-
-    #pass
 
 
 def extra_credit(filepath):
@@ -272,22 +263,24 @@ class TestCases(unittest.TestCase):
         # call write csv on the variable you saved and 'test.csv'
         write_csv(search_results, 'test.csv')
 
-
         # read in the csv that you wrote (create a variable csv_lines - a list containing all the lines in the csv you just wrote to above)
-        csv_lines = write_csv(search_results, 'test.csv').readlines() #how do i read this correctly 
-
+        csv_lines= []
+        test_file = open('test.csv')
+        csv_reader = csv.reader(test_file)
+        for line in csv_reader:
+            csv_lines.append(line)
 
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
 
         # check that the header row is correct
-        self.assertEqual(csv_lines[0], 'Book title,Author Name')   
+        self.assertEqual(csv_lines[0], ['Book title','Author Name'])   
 
         # check that the next row is 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'
-        self.assertEqual(csv_lines[1], 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling')
+        self.assertEqual(csv_lines[1], ['Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'])
 
         # check that the last row is 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling'
-        self.assertEqual(csv_lines[-1], 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling')
+        self.assertEqual(csv_lines[-1], ['Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling'])
         #pass
 
 
